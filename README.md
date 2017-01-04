@@ -1,6 +1,6 @@
 # bpho-lambda-rebuild-site
 
-Builds and deploys a Hugo-generated site to an S3 bucket.
+An AWS Lambda that fetches content and Hugo theme from their respective S3 buckets, and deploys to the live bucket.
 
 Based on https://github.com/ryansb/hugo-lambda, and http://bezdelev.com/post/hugo-aws-lambda-static-website/
 

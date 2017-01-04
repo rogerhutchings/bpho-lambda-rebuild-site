@@ -48,6 +48,7 @@ function rebuildSite(srcBucket, dstBucket, context) {
       });
     },
     function upload(next) {
+      console.log('Uploading compiled site to %s', dstBucket);
       var uploader = syncClient.uploadDir({
         localDir: pubDir,
         deleteRemoved: true,
@@ -57,11 +58,11 @@ function rebuildSite(srcBucket, dstBucket, context) {
         },
       });
       uploader.on('error', (err) => {
-        console.error('unable to sync up: ', err.stack);
+        console.error('Unable to sync up: ', err.stack);
         next(err);
       });
       uploader.on('end', () => {
-        console.log('done uploading');
+        console.log('Finished uploading');
         next(null);
       });
     },
