@@ -14,7 +14,7 @@ tmpDir = '/tmp/sources';
 pubDir = tmpDir + '/public';
 
 
-function rebuildSite(srcBucket, dstBucket, context) {
+function rebuildSite(srcBucket, contentBucket, dstBucket, context) {
   async.waterfall([
     function downloadSite(next) {
       var downloader = syncClient.downloadDir({
@@ -30,6 +30,23 @@ function rebuildSite(srcBucket, dstBucket, context) {
       });
       downloader.on('end', () => {
         console.log('Finished downloading from %s', srcBucket);
+        next(null);
+      });
+    },
+    function downloadContent(next) {
+      var downloader = syncClient.downloadDir({
+        localDir: tmpDir,
+        deleteRemoved: true,
+        s3Params: {
+          Bucket: contentBucket,
+        },
+      });
+      downloader.on('error', (err) => {
+        console.error('Unable to sync down: %s', err.stack);
+        next(err);
+      });
+      downloader.on('end', () => {
+        console.log('Finished downloading from %s', contentBucket);
         next(null);
       });
     },
@@ -77,7 +94,8 @@ function rebuildSite(srcBucket, dstBucket, context) {
 exports.handler = (event, context) => {
   console.log('Reading options from event:\n', util.inspect(event, { depth: 5 }));
   var srcBucket = 'bpho-src';
+  var contentBucket = 'bpho-content';
   var dstBucket = 'bpho-live';
 
-  rebuildSite(srcBucket, dstBucket, context);
+  rebuildSite(srcBucket, contentBucket, dstBucket, context);
 };
