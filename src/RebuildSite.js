@@ -1,67 +1,70 @@
-var async = require('async');
-var util = require('util');
-var spawn = require('child_process').spawn;
-var s3 = require('s3');
-var AWS = require('aws-sdk');
-var uuidV4 = require('uuid/v4');
+const async = require('async');
+const util = require('util');
+const spawn = require('child_process').spawn;
+const s3 = require('s3');
+const AWS = require('aws-sdk');
+const uuidV4 = require('uuid/v4');
 
-var syncClient = s3.createClient({
+const syncClient = s3.createClient({
   maxAsyncS3: 20,
 });
 
-var HUGO_BINARY = './hugo_0.18.1_linux_amd64';
+const HUGO_BINARY = './hugo_0.18.1_linux_amd64';
 
-var tmpDir = '/tmp/' + uuidV4();
-var pubDir = tmpDir + '/public';
+const tmpDir = '/tmp/' + uuidV4();
+const pubDir = tmpDir + '/public';
+
+function _s3Downloader(sourceBucket, callback) {
+  const downloader = syncClient.downloadDir({
+    localDir: tmpDir,
+    s3Params: {
+      Bucket: sourceBucket,
+    },
+  });
+  downloader.on('error', (err) => {
+    console.error('Unable to download from %s: %s', sourceBucket, err.stack);
+    callback(err);
+  });
+  downloader.on('end', () => {
+    console.log('Finished downloading from %s', sourceBucket);
+    callback(null);
+  });
+}
 
 function rebuildSite(srcBucket, contentBucket, dstBucket, context) {
   async.waterfall([
     function mkdir(next) {
-      var child = spawn("mkdir", ["-p", tmpDir], {});
+      const child = spawn('mkdir', ['-p', tmpDir], {});
       child.on('error', function(err) {
-          console.log("failed to make static dir: " + err);
+        console.log('Error creating directory %s: %s', tmpDir, err);
+        next(err);
+      });
+      child.on('close', function() {
+        console.log('Created directory %s', tmpDir);
+        next(null);
+      });
+    },
+    function downloadResources(next) {
+      async.parallel([
+        function downloadSite(next) {
+          _s3Downloader(srcBucket, next);
+        },
+        function downloadContent(next) {
+          _s3Downloader(contentBucket, next);
+        },
+      ], (err) => {
+        if (err) {
+          console.error('Error downloading resources: %s', err);
           next(err);
-      });
-      child.on('close', function(code) {
-          console.log("made static dir: " + code);
+        } else {
+          console.log('Finished downloading resources');
           next(null);
-      });
-    },
-    function downloadSite(next) {
-      var downloader = syncClient.downloadDir({
-        localDir: tmpDir,
-        s3Params: {
-          Bucket: srcBucket,
-        },
-      });
-      downloader.on('error', (err) => {
-        console.error('Unable to sync down: %s', err.stack);
-        next(err);
-      });
-      downloader.on('end', () => {
-        console.log('Finished downloading from %s', srcBucket);
-        next(null);
-      });
-    },
-    function downloadContent(next) {
-      var downloader = syncClient.downloadDir({
-        localDir: tmpDir,
-        s3Params: {
-          Bucket: contentBucket,
-        },
-      });
-      downloader.on('error', (err) => {
-        console.error('Unable to sync down: %s', err.stack);
-        next(err);
-      });
-      downloader.on('end', () => {
-        console.log('Finished downloading from %s', contentBucket);
-        next(null);
+        }
       });
     },
     function runHugo(next) {
       console.log('Running Hugo');
-      var child = spawn(HUGO_BINARY, ['-v', `--source=${tmpDir}`, `--destination=${pubDir}`], {});
+      const child = spawn(HUGO_BINARY, ['-v', `--source=${tmpDir}`, `--destination=${pubDir}`], {});
       child.stdout.on('data', (data) => console.log('hugo-stdout: %s', data));
       child.stderr.on('data', (data) => console.log('hugo-stderr: %s', data));
       child.on('error', (err) => {
@@ -75,7 +78,7 @@ function rebuildSite(srcBucket, contentBucket, dstBucket, context) {
     },
     function upload(next) {
       console.log('Uploading compiled site to %s', dstBucket);
-      var uploader = syncClient.uploadDir({
+      const uploader = syncClient.uploadDir({
         localDir: pubDir,
         deleteRemoved: true,
         s3Params: {
@@ -84,7 +87,7 @@ function rebuildSite(srcBucket, contentBucket, dstBucket, context) {
         },
       });
       uploader.on('error', (err) => {
-        console.error('Unable to sync up: ', err.stack);
+        console.error('Error uploading compiled site: %s', err.stack);
         next(err);
       });
       uploader.on('end', () => {
@@ -93,18 +96,20 @@ function rebuildSite(srcBucket, contentBucket, dstBucket, context) {
       });
     },
   ], (err) => {
-    if (err) console.error('Failure because of: %s', err)
-    else console.log('All methods in waterfall succeeded.');
-
+    if (err) {
+      console.error('Failed to rebuild: %s', err);
+    } else {
+      console.log('Finished rebuilding site!');
+    }
     context.done();
   });
 }
 
 exports.handler = (event, context) => {
   console.log('Reading options from event:\n', util.inspect(event, { depth: 5 }));
-  var srcBucket = 'bpho-src';
-  var contentBucket = 'bpho-content';
-  var dstBucket = 'bpho-live';
+  const srcBucket = 'bpho-src';
+  const contentBucket = 'bpho-content';
+  const dstBucket = 'bpho-live';
 
   rebuildSite(srcBucket, contentBucket, dstBucket, context);
 };
