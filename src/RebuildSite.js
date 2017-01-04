@@ -3,6 +3,7 @@ var util = require('util');
 var spawn = require('child_process').spawn;
 var s3 = require('s3');
 var AWS = require('aws-sdk');
+var uuidV4 = require('uuid/v4');
 
 var syncClient = s3.createClient({
   maxAsyncS3: 20,
@@ -10,12 +11,22 @@ var syncClient = s3.createClient({
 
 var HUGO_BINARY = './hugo_0.18.1_linux_amd64';
 
-var tmpDir = '/tmp';
+var tmpDir = '/tmp/' + uuidV4();
 var pubDir = tmpDir + '/public';
-
 
 function rebuildSite(srcBucket, contentBucket, dstBucket, context) {
   async.waterfall([
+    function mkdir(next) {
+      var child = spawn("mkdir", ["-p", tmpDir], {});
+      child.on('error', function(err) {
+          console.log("failed to make static dir: " + err);
+          next(err);
+      });
+      child.on('close', function(code) {
+          console.log("made static dir: " + code);
+          next(null);
+      });
+    },
     function downloadSite(next) {
       var downloader = syncClient.downloadDir({
         localDir: tmpDir,

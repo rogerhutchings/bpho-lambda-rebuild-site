@@ -5,7 +5,8 @@
   "dependencies": {
     "async": "^2.1.4",
     "s3": "^4.4.0",
-    "s3-cli": "^0.13.0"
+    "s3-cli": "^0.13.0",
+    "uuid": "^3.0.1"
   },
   "devDependencies": {},
   "scripts": {
