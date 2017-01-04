@@ -10,8 +10,8 @@ var syncClient = s3.createClient({
 
 var HUGO_BINARY = './hugo_0.18.1_linux_amd64';
 
-tmpDir = '/tmp/sources';
-pubDir = tmpDir + '/public';
+var tmpDir = '/tmp';
+var pubDir = tmpDir + '/public';
 
 
 function rebuildSite(srcBucket, contentBucket, dstBucket, context) {
@@ -19,7 +19,6 @@ function rebuildSite(srcBucket, contentBucket, dstBucket, context) {
     function downloadSite(next) {
       var downloader = syncClient.downloadDir({
         localDir: tmpDir,
-        deleteRemoved: true,
         s3Params: {
           Bucket: srcBucket,
         },
@@ -36,7 +35,6 @@ function rebuildSite(srcBucket, contentBucket, dstBucket, context) {
     function downloadContent(next) {
       var downloader = syncClient.downloadDir({
         localDir: tmpDir,
-        deleteRemoved: true,
         s3Params: {
           Bucket: contentBucket,
         },
