@@ -11,8 +11,8 @@ const syncClient = s3.createClient({
 
 const HUGO_BINARY = './hugo_0.18.1_linux_amd64';
 
-const tmpDir = '/tmp/' + uuidV4();
-const pubDir = tmpDir + '/public';
+const tmpDir = `/tmp/${uuidV4()}`;
+const pubDir = `${tmpDir}/public`;
 
 function _s3Downloader(sourceBucket, callback) {
   const downloader = syncClient.downloadDir({
