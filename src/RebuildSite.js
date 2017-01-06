@@ -1,15 +1,15 @@
-const async = require('async');
-const util = require('util');
-const spawn = require('child_process').spawn;
-const s3 = require('s3');
-const AWS = require('aws-sdk');
-const uuidV4 = require('uuid/v4');
+import async from 'async';
+import util from 'util';
+import {spawn} from 'child_process';
+import s3 from 's3';
+import AWS from 'aws-sdk';
+import uuidV4 from 'uuid/v4';
 
 const syncClient = s3.createClient({
   maxAsyncS3: 20,
 });
 
-const HUGO_BINARY = './hugo_0.18.1_linux_amd64';
+const HUGO_BINARY = './lib/hugo_0.18.1_linux_amd64';
 
 const tmpDir = `/tmp/${uuidV4()}`;
 const pubDir = `${tmpDir}/public`;
