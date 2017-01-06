@@ -33,14 +33,14 @@ function _s3Downloader(sourceBucket, callback) {
 
 function rebuildSite(srcBucket, contentBucket, dstBucket, context) {
   async.waterfall([
-    function mkdir(next) {
+    function mkTempDir(next) {
       const child = spawn('mkdir', ['-p', tmpDir], {});
-      child.on('error', function(err) {
-        console.log('Error creating directory %s: %s', tmpDir, err);
+      child.on('error', (err) => {
+        console.log('Failed to create directory: %s', err);
         next(err);
       });
-      child.on('close', function() {
-        console.log('Created directory %s', tmpDir);
+      child.on('close', (code) => {
+        console.log('Created directory: %s, %s', tmpDir, code);
         next(null);
       });
     },
