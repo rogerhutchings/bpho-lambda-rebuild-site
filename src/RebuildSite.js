@@ -9,7 +9,7 @@ const syncClient = s3.createClient({
   maxAsyncS3: 20,
 });
 
-function _s3Downloader(sourceBucket, callback) {
+function _s3Downloader(sourceBucket, tmpDir, callback) {
   const downloader = syncClient.downloadDir({
     localDir: tmpDir,
     s3Params: {
@@ -42,10 +42,10 @@ function rebuildSite(srcBucket, contentBucket, destBucket, tmpDir, pubDir, HUGO_
     function downloadResources(next) {
       async.parallel([
         function downloadSite(next) {
-          _s3Downloader(srcBucket, next);
+          _s3Downloader(srcBucket, tmpDir, next);
         },
         function downloadContent(next) {
-          _s3Downloader(contentBucket, next);
+          _s3Downloader(contentBucket, tmpDir, next);
         },
       ], (err) => {
         if (err) {
