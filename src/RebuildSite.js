@@ -84,6 +84,7 @@ function rebuildSite(srcBucket, contentBucket, dstBucket, context) {
         s3Params: {
           ACL: 'public-read',
           Bucket: dstBucket,
+          CacheControl: 'max-age=0',
         },
       });
       uploader.on('error', (err) => {
