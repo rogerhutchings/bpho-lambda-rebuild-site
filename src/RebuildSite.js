@@ -9,11 +9,6 @@ const syncClient = s3.createClient({
   maxAsyncS3: 20,
 });
 
-const HUGO_BINARY = './lib/hugo_0.18.1_linux_amd64';
-
-const tmpDir = `/tmp/${uuidV4()}`;
-const pubDir = `${tmpDir}/public`;
-
 function _s3Downloader(sourceBucket, callback) {
   const downloader = syncClient.downloadDir({
     localDir: tmpDir,
@@ -31,7 +26,7 @@ function _s3Downloader(sourceBucket, callback) {
   });
 }
 
-function rebuildSite(srcBucket, contentBucket, dstBucket, context) {
+function rebuildSite(srcBucket, contentBucket, destBucket, tmpDir, pubDir, HUGO_BINARY, context) {
   async.waterfall([
     function mkTempDir(next) {
       const child = spawn('mkdir', ['-p', tmpDir], {});
@@ -77,13 +72,13 @@ function rebuildSite(srcBucket, contentBucket, dstBucket, context) {
       });
     },
     function upload(next) {
-      console.log('Uploading compiled site to %s', dstBucket);
+      console.log('Uploading compiled site to %s', destBucket);
       const uploader = syncClient.uploadDir({
         localDir: pubDir,
         deleteRemoved: true,
         s3Params: {
           ACL: 'public-read',
-          Bucket: dstBucket,
+          Bucket: destBucket,
           CacheControl: 'max-age=0',
         },
       });
@@ -93,6 +88,17 @@ function rebuildSite(srcBucket, contentBucket, dstBucket, context) {
       });
       uploader.on('end', () => {
         console.log('Finished uploading');
+        next(null);
+      });
+    },
+    function rmTempDir(next) {
+      const child = spawn('rm', ['-rf', tmpDir], {});
+      child.on('error', (err) => {
+        console.log('Failed to delete directory: %s', err);
+        next(err);
+      });
+      child.on('close', (code) => {
+        console.log('Deleted directory: %s, %s', tmpDir, code);
         next(null);
       });
     },
@@ -110,7 +116,9 @@ exports.handler = (event, context) => {
   console.log('Reading options from event:\n', util.inspect(event, { depth: 5 }));
   const srcBucket = 'bpho-src';
   const contentBucket = 'bpho-content';
-  const dstBucket = 'bpho-live';
-
-  rebuildSite(srcBucket, contentBucket, dstBucket, context);
+  const destBucket = 'bpho-live';
+  const HUGO_BINARY = './lib/hugo_0.18.1_linux_amd64';
+  const tmpDir = `/tmp/${uuidV4()}`;
+  const pubDir = `${tmpDir}/public`;
+  rebuildSite(srcBucket, contentBucket, destBucket, tmpDir, pubDir, HUGO_BINARY, context);
 };
