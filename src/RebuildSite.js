@@ -117,8 +117,8 @@ exports.handler = (event, context) => {
   const srcBucket = 'bpho-src';
   const contentBucket = 'bpho-content';
   const destBucket = 'bpho-live';
-  const HUGO_BINARY = './lib/hugo_0.18.1_linux_amd64';
   const tmpDir = `/tmp/${uuidV4()}`;
   const pubDir = `${tmpDir}/public`;
+  const HUGO_BINARY = './lib/hugo_0.18.1_linux_amd64';
   rebuildSite(srcBucket, contentBucket, destBucket, tmpDir, pubDir, HUGO_BINARY, context);
 };
